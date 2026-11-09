@@ -6,6 +6,11 @@ set -euo pipefail
 
 TAG="${1:-latest}"
 cd /opt/notes
+
+# One deploy at a time per host: the first-boot retry loop and a pipeline deploy
+# (or two pipeline runs) must not recreate each other's containers mid-rollout.
+exec 9>/var/lock/notes-deploy.lock
+flock -w 600 9
 # shellcheck disable=SC1091
 source ./registry.conf # REGISTRY, WEB_REPO, APP_REPO, AWS_REGION (non-secret)
 
