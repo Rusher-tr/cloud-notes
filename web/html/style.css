@@ -1,0 +1,87 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1d2330;
+  --muted: #667085;
+  --border: #e3e6eb;
+  --accent: #2563eb;
+  --danger: #c62828;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b;
+    --card: #1b2029;
+    --text: #e7eaf0;
+    --muted: #98a2b3;
+    --border: #2b3240;
+    --accent: #5b8def;
+    --danger: #ef6b6b;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+header, main, footer { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 32px; }
+h1 { margin: 0; font-size: 28px; }
+.sub { margin: 4px 0 24px; color: var(--muted); font-size: 14px; }
+
+form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+input, textarea {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+textarea { resize: vertical; }
+.actions { display: flex; gap: 8px; }
+button {
+  font: inherit;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 14px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+button.danger { background: transparent; color: var(--danger); border: 1px solid var(--border); }
+button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+.error { color: var(--danger); margin: 0; min-height: 1.5em; font-size: 14px; }
+
+#notes { display: grid; gap: 12px; margin: 20px 0; }
+.note {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.note h2 { margin: 0 0 4px; font-size: 18px; word-break: break-word; }
+.note p { margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; }
+.note .meta { color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.note .meta div { display: flex; gap: 6px; }
+.empty { color: var(--muted); text-align: center; margin: 24px 0; }
+
+footer {
+  color: var(--muted);
+  font-size: 13px;
+  padding-bottom: 32px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+code { font-size: 12px; }

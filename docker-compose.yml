@@ -1,0 +1,40 @@
+# Production compose file - this exact file runs on every EC2 host in the Auto Scaling Group.
+# Values come from /opt/notes/.env, which the instance's user-data writes (non-secret values only).
+# Locally, docker-compose.override.yml is merged in automatically (adds build + a Postgres container).
+
+name: notes
+
+services:
+  web:
+    image: ${WEB_IMAGE:-notes-web:local}
+    ports:
+      - "80:8080"            # the ONLY published port; the ALB reaches this
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    image: ${APP_IMAGE:-notes-app:local}
+    expose:
+      - "5000"               # reachable only from the web container on the compose network
+    environment:
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-notes}
+      DB_SSLMODE: ${DB_SSLMODE:-prefer}
+      DB_SECRET_ARN: ${DB_SECRET_ARN:-}      # AWS: password fetched from Secrets Manager at runtime
+      AWS_REGION: ${AWS_REGION:-}
+      INSTANCE_ID: ${INSTANCE_ID:-local}
+      AVAILABILITY_ZONE: ${AVAILABILITY_ZONE:-local}
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

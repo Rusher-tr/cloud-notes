@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloud Notes</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Cloud Notes</h1>
+    <p class="sub">Three-tier app: Nginx (web) &rarr; Flask (app) &rarr; PostgreSQL on RDS (database)</p>
+  </header>
+
+  <main>
+    <form id="note-form" autocomplete="off">
+      <input type="hidden" id="note-id">
+      <input id="title" maxlength="200" placeholder="Title" required>
+      <textarea id="content" maxlength="10000" rows="4" placeholder="Write a note..."></textarea>
+      <div class="actions">
+        <button type="submit" id="save-btn">Add note</button>
+        <button type="button" id="cancel-btn" class="secondary" hidden>Cancel</button>
+      </div>
+      <p id="error" class="error" role="alert"></p>
+    </form>
+
+    <section id="notes" aria-live="polite"></section>
+    <p id="empty" class="empty" hidden>No notes yet. Add your first one above.</p>
+  </main>
+
+  <footer>
+    <span id="served-by">Connecting&hellip;</span>
+    <button type="button" id="refresh-info" class="link">refresh</button>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

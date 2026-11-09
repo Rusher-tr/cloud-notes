@@ -1,0 +1,81 @@
+#!/bin/bash
+# EC2 bootstrap (runs once at first boot of every Auto Scaling Group instance).
+# Rendered by Terraform templatefile(); only NON-SECRET values are written here.
+set -euxo pipefail
+exec > >(tee -a /var/log/notes-bootstrap.log) 2>&1
+
+# ---------- Docker + Compose ----------
+dnf install -y docker
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# ---------- instance identity (IMDSv2) ----------
+TOKEN=$(curl -fsS -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+INSTANCE_ID=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
+AZ=$(curl -fsS -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/placement/availability-zone)
+
+# ---------- centralised logging: every container -> CloudWatch Logs ----------
+mkdir -p /etc/docker
+cat > /etc/docker/daemon.json <<EOF
+{
+  "log-driver": "awslogs",
+  "log-opts": {
+    "awslogs-region": "${region}",
+    "awslogs-group": "${log_group}",
+    "tag": "$INSTANCE_ID/{{.Name}}",
+    "mode": "non-blocking"
+  }
+}
+EOF
+systemctl enable --now docker
+
+# ---------- application files ----------
+mkdir -p /opt/notes
+cd /opt/notes
+
+cat > docker-compose.yml <<'COMPOSE_EOF'
+${compose_file}
+COMPOSE_EOF
+
+cat > deploy.sh <<'DEPLOY_EOF'
+${deploy_script}
+DEPLOY_EOF
+chmod 750 deploy.sh
+
+cat > registry.conf <<EOF
+REGISTRY=${registry}
+WEB_REPO=${web_repo}
+APP_REPO=${app_repo}
+AWS_REGION=${region}
+EOF
+
+# Compose environment. The DB *password* is NOT here - the app fetches it from
+# Secrets Manager at runtime using the instance role.
+cat > .env <<EOF
+WEB_IMAGE=${web_repo}:latest
+APP_IMAGE=${app_repo}:latest
+DB_HOST=${db_host}
+DB_PORT=${db_port}
+DB_NAME=${db_name}
+DB_SSLMODE=require
+DB_SECRET_ARN=${db_secret_arn}
+AWS_REGION=${region}
+INSTANCE_ID=$INSTANCE_ID
+AVAILABILITY_ZONE=$AZ
+EOF
+chmod 640 .env registry.conf
+
+# ---------- first deploy ----------
+# On a brand-new environment the pipeline may not have pushed images yet,
+# so keep retrying for up to ~20 minutes instead of failing the boot.
+for attempt in $(seq 1 60); do
+  if /opt/notes/deploy.sh latest; then
+    echo "bootstrap complete"
+    exit 0
+  fi
+  echo "deploy attempt $attempt failed (images not pushed yet?) - retrying in 20s"
+  sleep 20
+done
+echo "bootstrap: giving up on first deploy; the CI/CD pipeline will deploy via SSM"
