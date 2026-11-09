@@ -134,6 +134,10 @@ terraform apply          # ~10-15 min (RDS is the slow part)
 If you get *"Provider with url https://token.actions.githubusercontent.com already exists"*, set
 `create_github_oidc_provider = false` in `terraform.tfvars` and apply again.
 
+If you get *"Access denied when attempting to assume role … AWSServiceRoleForAutoScaling"* on a
+brand-new account, just run `terraform apply` again. AWS creates that service-linked role the first
+time any Auto Scaling Group is made, and the first launch can happen before the role is usable.
+
 ### 5. Connect the pipeline to AWS, then push
 
 ```bash

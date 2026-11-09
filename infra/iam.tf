@@ -75,6 +75,9 @@ resource "aws_iam_openid_connect_provider" "github" {
 }
 
 locals {
+  github_owner     = split("/", var.github_repo)[0]
+  github_repo_name = split("/", var.github_repo)[1]
+
   github_oidc_provider_arn = var.create_github_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
 }
 
@@ -82,6 +85,9 @@ resource "aws_iam_role" "github_actions" {
   name = "${local.name}-github-actions-role"
 
   # Only workflows running on the main branch of YOUR repository can assume this role.
+  # GitHub may send the subject in the classic form   repo:owner/name:ref:refs/heads/main
+  # or with immutable IDs                              repo:owner@123/name@456:ref:refs/heads/main
+  # so both forms are accepted (owner, repo name and branch are still fixed).
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -91,7 +97,12 @@ resource "aws_iam_role" "github_actions" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/main"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = [
+            "repo:${var.github_repo}:ref:refs/heads/main",
+            "repo:${local.github_owner}@*/${local.github_repo_name}@*:ref:refs/heads/main",
+          ]
         }
       }
     }]
