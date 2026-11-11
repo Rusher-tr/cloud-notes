@@ -26,12 +26,15 @@ output "github_actions_role_arn" {
 
 output "github_setup_commands" {
   description = "Run these from the repository folder (needs `gh auth login`) to configure the pipeline."
-  value       = <<-EOT
+  # Uses `gh api` so it also works with old gh versions that lack `gh variable`.
+  # Each variable is updated if it exists (PATCH) or created otherwise (POST).
+  value = <<-EOT
     gh secret set AWS_ROLE_ARN --body "${aws_iam_role.github_actions.arn}"
-    gh variable set AWS_REGION --body "${var.aws_region}"
-    gh variable set ECR_WEB_REPOSITORY --body "${aws_ecr_repository.repo["web"].name}"
-    gh variable set ECR_APP_REPOSITORY --body "${aws_ecr_repository.repo["app"].name}"
-    gh variable set ASG_NAME --body "${aws_autoscaling_group.app.name}"
-    gh variable set APP_URL --body "http://${aws_lb.main.dns_name}"
+    setvar() { gh api -X PATCH "repos/${var.github_repo}/actions/variables/$1" -f name="$1" -f value="$2" >/dev/null 2>&1 || gh api -X POST "repos/${var.github_repo}/actions/variables" -f name="$1" -f value="$2" >/dev/null && echo "set $1"; }
+    setvar AWS_REGION "${var.aws_region}"
+    setvar ECR_WEB_REPOSITORY "${aws_ecr_repository.repo["web"].name}"
+    setvar ECR_APP_REPOSITORY "${aws_ecr_repository.repo["app"].name}"
+    setvar ASG_NAME "${aws_autoscaling_group.app.name}"
+    setvar APP_URL "http://${aws_lb.main.dns_name}"
   EOT
 }
